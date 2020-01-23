@@ -14,6 +14,7 @@ import _thread
 import wx
 import wx.lib.newevent
 from SerialCom import *
+from pprint import pprint
 
 # new event class for the COM thread
 (UpdateComData, EVT_UPDATE_COMDATA) = wx.lib.newevent.NewEvent()
@@ -112,10 +113,12 @@ class TermPanel(wx.Panel):
 
         # terminal
         self.txtTerm = wx.TextCtrl(
-            self, wx.ID_ANY, "", size=(700, 250), style=wx.TE_MULTILINE | wx.TE_READONLY
+            self,
+            wx.ID_ANY,
+            "",
+            size=(600, 250),
+            style=wx.TE_RICH | wx.TE_MULTILINE | wx.TE_READONLY,
         )
-        self.txtTerm.SetForegroundColour("yellow")
-        self.txtTerm.SetBackgroundColour("black")
 
         # monospace font is desirable
         fname = GetMonoFont()
@@ -124,6 +127,9 @@ class TermPanel(wx.Panel):
 
         # panel for controls
         self.pnlControl = wx.Panel(self, wx.ID_ANY)
+        self.pnlInput = wx.Panel(self, wx.ID_ANY)
+        self.iiiInput = wx.TextCtrl(self.pnlInput, -1, "INPUTTEXT", size=(175, -1))
+        self.iiiSendInput = wx.Button(self.pnlInput, -1, "Send")
 
         # list of available COM ports
         from serial.tools import list_ports
@@ -156,13 +162,19 @@ class TermPanel(wx.Panel):
         self.cboNLine.SetStringSelection("LF(0x0A)")
 
         # local echo
+        self.localEcho = True
+
+        # local echo
         self.sttLEcho = wx.StaticText(self.pnlControl, -1, "Local Echo")
         self.choLEcho = wx.Choice(self.pnlControl, -1, choices=["Yes", "No"])
-        self.choLEcho.SetStringSelection("No")
+        if self.localEcho:
+            self.choLEcho.SetStringSelection("Yes")
+        else:
+            self.choLEcho.SetStringSelection("No")
 
         # clear terminal
         self.sttClear = wx.StaticText(self.pnlControl, -1, "Clear Terminal")
-        self.btnClear = wx.Button(self.pnlControl, -1, "Clear")
+        self.btnClear = wx.Button(self.pnlControl, -1, "Clear Terminal")
 
         # reset data
         self.sttReset = wx.StaticText(self.pnlControl, -1, "Reset Data")
@@ -182,7 +194,7 @@ class TermPanel(wx.Panel):
         self.thread = ComThread(self, self.ser)
 
         # sizer
-        sizer_g = wx.FlexGridSizer(10, 2, 4, 4)
+        sizer_g = wx.FlexGridSizer(15, 2, 4, 4)
         sizer_g.Add(self.sttSpeed, 1, wx.ALIGN_RIGHT | wx.ALIGN_CENTRE_VERTICAL)
         sizer_g.Add(self.cboSpeed, 1, wx.EXPAND)
         sizer_g.Add(self.sttCPort, 1, wx.ALIGN_RIGHT | wx.ALIGN_CENTRE_VERTICAL)
@@ -199,15 +211,21 @@ class TermPanel(wx.Panel):
         sizer_g.Add(self.btnReset, 1, wx.EXPAND)
         sizer_g.Add(self.sttSave, 1, wx.ALIGN_RIGHT | wx.ALIGN_CENTRE_VERTICAL)
         sizer_g.Add(self.btnSave, 1, wx.EXPAND)
-        sizer_g.Add((20, 20))
-        sizer_g.Add((20, 20))
         sizer_g.Add(self.sttSndPkt, 1, wx.ALIGN_RIGHT | wx.ALIGN_CENTRE_VERTICAL)
         sizer_g.Add(self.choSndPkt, 1, wx.EXPAND)
         self.pnlControl.SetSizer(sizer_g)
 
+        # input box sizer
+        sizer_i = wx.FlexGridSizer(15, 2, 4, 4)
+        sizer_i.Add(self.iiiInput, 1, wx.ALIGN_RIGHT | wx.ALIGN_CENTRE_VERTICAL)
+        sizer_i.Add(self.iiiSendInput, 1, wx.ALIGN_RIGHT | wx.ALIGN_CENTRE_VERTICAL)
+        self.Bind(wx.EVT_BUTTON, self.OnSendInput, self.iiiSendInput)
+        self.pnlInput.SetSizer(sizer_i)
+
         # alignment
-        sizer_h = wx.BoxSizer(wx.HORIZONTAL)
+        sizer_h = wx.BoxSizer(wx.VERTICAL)
         sizer_h.Add(self.txtTerm, 1, wx.ALL | wx.EXPAND, 4)
+        sizer_h.Add(self.pnlInput, 0, wx.ALL | wx.EXPAND, 4)
         sizer_h.Add(self.pnlControl, 0, wx.ALL | wx.EXPAND, 4)
         self.SetSizer(sizer_h)
         sizer_h.Fit(self)
@@ -243,9 +261,6 @@ class TermPanel(wx.Panel):
             self.newLine = 0x0D
         else:
             self.newLine = 0x0A
-
-        # local echo
-        self.localEcho = False
 
         # counter for alignment of hex display
         self.binCounter = 0
@@ -311,6 +326,9 @@ class TermPanel(wx.Panel):
     def SendData(self, data):
         if self.ser.is_open:
             self.ser.write(data)
+        else:
+            print("Serial port not open! Not sending anything.")
+            self.txtTerm.AppendText("Serial port not open!\n")
 
     ## Set new line character
     def SetNewLine(self, nl):
@@ -337,6 +355,17 @@ class TermPanel(wx.Panel):
     def ShowControls(self, flag):
         self.pnlControl.Show(flag)
         self.Layout()
+
+    ## Send data to term
+    def OnSendInput(self, evt):
+        data_to_send = bytearray(self.iiiInput.GetValue(), "utf-8")
+        data_to_send.extend(bytearray([self.newLine]))
+        pprint(data_to_send)
+        print("Sending following to COM: {}".format(data_to_send))
+        if self.localEcho:
+            for i in data_to_send:
+                self.txtTerm.AppendText("{}".format(chr(i)))
+        self.SendData(data_to_send)
 
     ## Save file button handler
     def OnFileSave(self, evt):
@@ -388,6 +417,7 @@ class TermPanel(wx.Panel):
     def OnTermChar(self, evt):
         # no tx data if rxOnly
         if self.rxOnly:
+            print("RX only")
             return
 
         if self.ser.is_open:
