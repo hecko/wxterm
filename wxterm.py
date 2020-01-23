@@ -20,29 +20,30 @@ from SerialCom import *
 
 
 # default data file name
-data_file = 'wxpyterm.dat'
+data_file = "wxpyterm.dat"
 
 ## Return (default) monospace font face name depending on the OS.
 #
 def GetMonoFont():
     # do not consider the case of osx
-    if os.name == 'posix':
+    if os.name == "posix":
         # fc-match will give default monospace font name
         a = os.popen('fc-match "Monospace"').read()
         # face name is burried in the middle
         l = a.find('"')
-        r = a.find('"',l+1)
-        return a[l+1:r]
+        r = a.find('"', l + 1)
+        return a[l + 1 : r]
 
     # Windows has only a couple of monospace fonts
-    elif os.name == 'nt':
-        return 'Consolas'
+    elif os.name == "nt":
+        return "Consolas"
 
     # unknown OS
     else:
         return None
 
-#--------1---------2---------3---------4---------5---------6---------7---------8
+
+# --------1---------2---------3---------4---------5---------6---------7---------8
 ##
 # \brief    COM port listening thread.
 # \details  Make sure that this thead starts after the port is open and
@@ -50,7 +51,6 @@ def GetMonoFont():
 #           the port should be set preferably with small value.
 #
 class ComThread:
-
     def __init__(self, win, ser):
         # window to which the receiving data is sent
         self.win = win
@@ -79,7 +79,7 @@ class ComThread:
             # valid byte received
             if len(data):
                 # create an event with the byte
-                evt = UpdateComData(data = data)
+                evt = UpdateComData(data=data)
                 # post the event
                 wx.PostEvent(self.win, evt)
 
@@ -94,12 +94,12 @@ class ComThread:
     def SetEventTarget(self, win):
         self.win = win
 
-#--------1---------2---------3---------4---------5---------6---------7---------8
+
+# --------1---------2---------3---------4---------5---------6---------7---------8
 ##
 # \brief    COM terminal window panel
 #
 class TermPanel(wx.Panel):
-
     def __init__(self, parent, ser, **kwgs):
         wx.Panel.__init__(self, parent, **kwgs)
 
@@ -108,53 +108,57 @@ class TermPanel(wx.Panel):
 
         # packet decoder
         self.pd = PacketDecoder()
-        self.pd.SetMode('decode')
+        self.pd.SetMode("decode")
 
         # terminal
-        self.txtTerm = wx.TextCtrl(self, wx.ID_ANY, "", size=(700,250),
-                style = wx.TE_MULTILINE|wx.TE_READONLY);
-        self.txtTerm.SetForegroundColour('yellow')
-        self.txtTerm.SetBackgroundColour('black')
+        self.txtTerm = wx.TextCtrl(
+            self, wx.ID_ANY, "", size=(700, 250), style=wx.TE_MULTILINE | wx.TE_READONLY
+        )
+        self.txtTerm.SetForegroundColour("yellow")
+        self.txtTerm.SetBackgroundColour("black")
 
         # monospace font is desirable
         fname = GetMonoFont()
         if fname:
-            self.txtTerm.SetFont(wx.Font(11,75,90,90,faceName=fname))
+            self.txtTerm.SetFont(wx.Font(11, 75, 90, 90, faceName=fname))
 
         # panel for controls
         self.pnlControl = wx.Panel(self, wx.ID_ANY)
 
         # list of available COM ports
         from serial.tools import list_ports
-        portlist = [port for port,desc,hwin in list_ports.comports()]
+
+        portlist = [port for port, desc, hwin in list_ports.comports()]
 
         # baudrate selection
         self.sttSpeed = wx.StaticText(self.pnlControl, -1, "Baudrate")
-        self.cboSpeed = wx.Choice(self.pnlControl, -1,
-                choices=['9600','19200','38400','57800','115200','230400'])
-        self.cboSpeed.SetStringSelection('115200')
+        self.cboSpeed = wx.Choice(
+            self.pnlControl,
+            -1,
+            choices=["9600", "19200", "38400", "57800", "115200", "230400"],
+        )
+        self.cboSpeed.SetStringSelection("115200")
 
         # port selection
         self.sttCPort = wx.StaticText(self.pnlControl, -1, "COM Port")
         self.cboCPort = wx.Choice(self.pnlControl, -1, choices=portlist)
 
         # terminal mode selection
-        self.sttTMode = wx.StaticText(self.pnlControl, -1, "Terminal Mode")
-        self.cboTMode = wx.Choice(self.pnlControl, -1,
-                choices=['ASCII','Hex','Protocol'])
-        self.cboTMode.SetStringSelection('ASCII')
+        self.sttTMode = wx.StaticText(self.pnlControl, -1, "Terminal_Mode")
+        self.cboTMode = wx.Choice(
+            self.pnlControl, -1, choices=["ASCII", "Hex", "Protocol"]
+        )
+        self.cboTMode.SetStringSelection("ASCII")
 
         # newline character
         self.sttNLine = wx.StaticText(self.pnlControl, -1, "Newline Char")
-        self.cboNLine = wx.Choice(self.pnlControl, -1,
-                choices=['LF(0x0A)','CR(0x0D)'])
-        self.cboNLine.SetStringSelection('LF(0x0A)')
+        self.cboNLine = wx.Choice(self.pnlControl, -1, choices=["LF(0x0A)", "CR(0x0D)"])
+        self.cboNLine.SetStringSelection("LF(0x0A)")
 
         # local echo
         self.sttLEcho = wx.StaticText(self.pnlControl, -1, "Local Echo")
-        self.choLEcho = wx.Choice(self.pnlControl, -1,
-                choices=['Yes','No'])
-        self.choLEcho.SetStringSelection('No')
+        self.choLEcho = wx.Choice(self.pnlControl, -1, choices=["Yes", "No"])
+        self.choLEcho.SetStringSelection("No")
 
         # clear terminal
         self.sttClear = wx.StaticText(self.pnlControl, -1, "Clear Terminal")
@@ -170,40 +174,41 @@ class TermPanel(wx.Panel):
 
         # outbound packet
         self.sttSndPkt = wx.StaticText(self.pnlControl, -1, "Send Packet")
-        self.choSndPkt = wx.Choice(self.pnlControl, -1,
-                choices=[key for key in OutPackets.keys()])
+        self.choSndPkt = wx.Choice(
+            self.pnlControl, -1, choices=[key for key in OutPackets.keys()]
+        )
 
         # COM thread object
         self.thread = ComThread(self, self.ser)
 
         # sizer
-        sizer_g = wx.FlexGridSizer(10,2,4,4)
-        sizer_g.Add(self.sttSpeed, 1, wx.ALIGN_RIGHT|wx.ALIGN_CENTRE_VERTICAL)
+        sizer_g = wx.FlexGridSizer(10, 2, 4, 4)
+        sizer_g.Add(self.sttSpeed, 1, wx.ALIGN_RIGHT | wx.ALIGN_CENTRE_VERTICAL)
         sizer_g.Add(self.cboSpeed, 1, wx.EXPAND)
-        sizer_g.Add(self.sttCPort, 1, wx.ALIGN_RIGHT|wx.ALIGN_CENTRE_VERTICAL)
+        sizer_g.Add(self.sttCPort, 1, wx.ALIGN_RIGHT | wx.ALIGN_CENTRE_VERTICAL)
         sizer_g.Add(self.cboCPort, 1, wx.EXPAND)
-        sizer_g.Add(self.sttTMode, 1, wx.ALIGN_RIGHT|wx.ALIGN_CENTRE_VERTICAL)
+        sizer_g.Add(self.sttTMode, 1, wx.ALIGN_RIGHT | wx.ALIGN_CENTRE_VERTICAL)
         sizer_g.Add(self.cboTMode, 1, wx.EXPAND)
-        sizer_g.Add(self.sttNLine, 1, wx.ALIGN_RIGHT|wx.ALIGN_CENTRE_VERTICAL)
+        sizer_g.Add(self.sttNLine, 1, wx.ALIGN_RIGHT | wx.ALIGN_CENTRE_VERTICAL)
         sizer_g.Add(self.cboNLine, 1, wx.EXPAND)
-        sizer_g.Add(self.sttLEcho, 1, wx.ALIGN_RIGHT|wx.ALIGN_CENTRE_VERTICAL)
+        sizer_g.Add(self.sttLEcho, 1, wx.ALIGN_RIGHT | wx.ALIGN_CENTRE_VERTICAL)
         sizer_g.Add(self.choLEcho, 1, wx.EXPAND)
-        sizer_g.Add(self.sttClear, 1, wx.ALIGN_RIGHT|wx.ALIGN_CENTRE_VERTICAL)
+        sizer_g.Add(self.sttClear, 1, wx.ALIGN_RIGHT | wx.ALIGN_CENTRE_VERTICAL)
         sizer_g.Add(self.btnClear, 1, wx.EXPAND)
-        sizer_g.Add(self.sttReset, 1, wx.ALIGN_RIGHT|wx.ALIGN_CENTRE_VERTICAL)
+        sizer_g.Add(self.sttReset, 1, wx.ALIGN_RIGHT | wx.ALIGN_CENTRE_VERTICAL)
         sizer_g.Add(self.btnReset, 1, wx.EXPAND)
-        sizer_g.Add(self.sttSave, 1, wx.ALIGN_RIGHT|wx.ALIGN_CENTRE_VERTICAL)
+        sizer_g.Add(self.sttSave, 1, wx.ALIGN_RIGHT | wx.ALIGN_CENTRE_VERTICAL)
         sizer_g.Add(self.btnSave, 1, wx.EXPAND)
-        sizer_g.Add((20,20))
-        sizer_g.Add((20,20))
-        sizer_g.Add(self.sttSndPkt, 1, wx.ALIGN_RIGHT|wx.ALIGN_CENTRE_VERTICAL)
+        sizer_g.Add((20, 20))
+        sizer_g.Add((20, 20))
+        sizer_g.Add(self.sttSndPkt, 1, wx.ALIGN_RIGHT | wx.ALIGN_CENTRE_VERTICAL)
         sizer_g.Add(self.choSndPkt, 1, wx.EXPAND)
         self.pnlControl.SetSizer(sizer_g)
 
         # alignment
         sizer_h = wx.BoxSizer(wx.HORIZONTAL)
-        sizer_h.Add(self.txtTerm, 1, wx.ALL|wx.EXPAND, 4)
-        sizer_h.Add(self.pnlControl, 0, wx.ALL|wx.EXPAND, 4)
+        sizer_h.Add(self.txtTerm, 1, wx.ALL | wx.EXPAND, 4)
+        sizer_h.Add(self.pnlControl, 0, wx.ALL | wx.EXPAND, 4)
         self.SetSizer(sizer_h)
         sizer_h.Fit(self)
 
@@ -221,7 +226,6 @@ class TermPanel(wx.Panel):
         self.Bind(wx.EVT_CLOSE, self.OnClose)
         self.Bind(EVT_UPDATE_COMDATA, self.OnUpdateComData)
 
-
         # raw data storage
         self.rawdata = bytearray()
 
@@ -235,7 +239,7 @@ class TermPanel(wx.Panel):
         self.rxOnly = False
 
         # newline character
-        if 'CR' in self.cboNLine.GetStringSelection():
+        if "CR" in self.cboNLine.GetStringSelection():
             self.newLine = 0x0D
         else:
             self.newLine = 0x0A
@@ -299,7 +303,7 @@ class TermPanel(wx.Panel):
 
     ## Save received data
     def SaveRawData(self, fname):
-        f = open(fname, 'wb')
+        f = open(fname, "wb")
         f.write(self.rawdata)
         f.close()
 
@@ -317,16 +321,16 @@ class TermPanel(wx.Panel):
     def SetLocalEcho(self, flag):
         self.localEcho = flag
 
-    def SetRxOnly(self, flag = True):
+    def SetRxOnly(self, flag=True):
         self.rxOnly = flag
 
     ## Set terminal type
     def SetTermType(self, termtype):
-        if termtype != '':
+        if termtype != "":
             self.termType = termtype
 
-        if self.termType == 'Hex':
-            self.txtTerm.AppendText('\n')
+        if self.termType == "Hex":
+            self.txtTerm.AppendText("\n")
             self.binCounter = 0
 
     ## Show/hide controls
@@ -353,14 +357,14 @@ class TermPanel(wx.Panel):
 
     ## Newline character choice control handler
     def OnNewLine(self, evt):
-        if 'CR' in self.cboNLine.GetStringSelection():
-            self.SetNewLine(0x0d)
+        if "CR" in self.cboNLine.GetStringSelection():
+            self.SetNewLine(0x0D)
         else:
-            self.SetNewLine(0x0a)
+            self.SetNewLine(0x0A)
 
     ## Local echo mode selection handler
     def OnLocalEcho(self, evt):
-        if 'Yes' in self.choLEcho.GetStringSelection():
+        if "Yes" in self.choLEcho.GetStringSelection():
             self.SetLocalEcho(True)
         else:
             self.SetLocalEcho(False)
@@ -371,14 +375,14 @@ class TermPanel(wx.Panel):
         speed = self.cboSpeed.GetStringSelection()
 
         # device is not selected
-        if port == '':
+        if port == "":
             return
 
         # open the com port
-        if self.OpenPort(port,speed):
-            wx.MessageBox(port + ' is (re)open')
+        if self.OpenPort(port, speed):
+            wx.MessageBox(port + " is (re)open")
         else:
-            wx.MessageBox('Failed to open: ' + port)
+            wx.MessageBox("Failed to open: " + port)
 
     ## Terminal input handler
     def OnTermChar(self, evt):
@@ -394,16 +398,15 @@ class TermPanel(wx.Panel):
                 pass
 
         if self.localEcho:
-            if self.termType == 'ASCII':
+            if self.termType == "ASCII":
                 self.txtTerm.AppendText(chr(evt.GetKeyCode()))
             else:
-                self.txtTerm.AppendText('0x{:02X}.'.format(evt.GetKeyCode()))
+                self.txtTerm.AppendText("0x{:02X}.".format(evt.GetKeyCode()))
 
     ## Local echo mode selection handler
     def OnSendPacket(self, evt):
         if self.ser.is_open:
             self.ser.write(OutPackets[self.choSndPkt.GetStringSelection()])
-
 
     ## COM data input handler
     def OnUpdateComData(self, evt):
@@ -412,47 +415,46 @@ class TermPanel(wx.Panel):
             # append incoming byte to the rawdata
             self.rawdata.append(byte)
 
-            if self.termType == 'Protocol':
+            if self.termType == "Protocol":
                 # pass byte to the packet decoder
                 ret = self.pd.AddByte(byte)
                 # display packet decode result
                 if ret is None:
                     pass
                 else:
-                    self.txtTerm.AppendText(ret + '\n')
+                    self.txtTerm.AppendText(ret + "\n")
 
-            elif self.termType == 'Hex':
+            elif self.termType == "Hex":
                 # display formatted hex
-                self.txtTerm.AppendText('0x{:02X}'.format(byte))
+                self.txtTerm.AppendText("0x{:02X}".format(byte))
                 # counter for alignment of the hex display
                 self.binCounter = self.binCounter + 1
 
                 if self.binCounter == 8:
-                    self.txtTerm.AppendText(' - ')
+                    self.txtTerm.AppendText(" - ")
 
                 elif self.binCounter == 16:
-                    self.txtTerm.AppendText('\n')
+                    self.txtTerm.AppendText("\n")
                     self.binCounter = 0
 
                 else:
-                    self.txtTerm.AppendText('.')
+                    self.txtTerm.AppendText(".")
 
             else:
                 if self.newLine == 0x0A:
                     if byte == 0x0D:
                         pass
                     elif byte == 0x0A:
-                        self.txtTerm.AppendText('\n')
+                        self.txtTerm.AppendText("\n")
                     else:
                         self.txtTerm.AppendText(chr(byte))
                 elif self.newLine == 0x0D:
                     if byte == 0x0A:
                         pass
                     elif byte == 0x0D:
-                        self.txtTerm.AppendText('\n')
+                        self.txtTerm.AppendText("\n")
                     else:
                         self.txtTerm.AppendText(chr(byte))
-
 
     ## wx.EVT_CLOSE handler
     def OnClose(self, evt):
@@ -472,26 +474,25 @@ class TermPanel(wx.Panel):
         self.Destroy()
 
 
-#--------1---------2---------3---------4---------5---------6---------7---------8
-if __name__=="__main__":
+# --------1---------2---------3---------4---------5---------6---------7---------8
+if __name__ == "__main__":
 
     class MyFrame(wx.Frame):
-
         def __init__(self, parent, title):
             wx.Frame.__init__(self, parent, title=title)
 
             # serial terminal panel
-            self.pnlTerm = TermPanel(self, serial.Serial(), size=(900,400))
+            self.pnlTerm = TermPanel(self, serial.Serial(), size=(900, 400))
 
             # sizer
             self.sizer = wx.BoxSizer(wx.VERTICAL)
-            self.sizer.Add(self.pnlTerm,1, wx.EXPAND)
+            self.sizer.Add(self.pnlTerm, 1, wx.EXPAND)
 
             self.SetSizer(self.sizer)
             self.SetAutoLayout(1)
             self.sizer.Fit(self)
             self.Show()
-    
+
     # app loop
     app = wx.App()
     frame = MyFrame(None, "Serial Terminal Demo")

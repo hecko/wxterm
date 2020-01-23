@@ -5,6 +5,7 @@ Release/
 *.obj
 *.log
 tags
+*.dat
 
 # psoc specific files and folders
 codegentemp/
