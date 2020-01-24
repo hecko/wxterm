@@ -120,12 +120,21 @@ class TermPanel(wx.Panel):
             style=wx.TE_RICH | wx.TE_MULTILINE | wx.TE_READONLY,
         )
 
-        # debug term
-        self.debugTerm = wx.TextCtrl(
+        # debug TX term
+        self.debugTxTerm = wx.TextCtrl(
             self,
             wx.ID_ANY,
             "",
-            size=(-1, 100),
+            size=(-1, 50),
+            style=wx.TE_RICH | wx.TE_MULTILINE | wx.TE_READONLY,
+        )
+
+        # debug RX term
+        self.debugRxTerm = wx.TextCtrl(
+            self,
+            wx.ID_ANY,
+            "",
+            size=(-1, 50),
             style=wx.TE_RICH | wx.TE_MULTILINE | wx.TE_READONLY,
         )
 
@@ -168,7 +177,7 @@ class TermPanel(wx.Panel):
         # newline character
         self.sttNLine = wx.StaticText(self.pnlControl, -1, "Newline Char")
         self.cboNLine = wx.Choice(
-            self.pnlControl, -1, choices=["LF(0x0A)", "CR(0x0D)", "None"]
+            self.pnlControl, -1, choices=["LF(0x0A) \\n", "CR(0x0D) \\r", "None"]
         )
         self.cboNLine.SetStringSelection("None")
 
@@ -238,7 +247,8 @@ class TermPanel(wx.Panel):
         sizer_h.Add(self.txtTerm, 0, wx.ALL | wx.EXPAND, 10)
         sizer_h.Add(self.pnlInput, 0, wx.ALL | wx.EXPAND, 10)
         sizer_h.Add(self.pnlControl, 0, wx.ALL | wx.EXPAND, 10)
-        sizer_h.Add(self.debugTerm, 0, wx.ALL | wx.EXPAND, 10)
+        sizer_h.Add(self.debugTxTerm, 0, wx.ALL | wx.EXPAND, 10)
+        sizer_h.Add(self.debugRxTerm, 0, wx.ALL | wx.EXPAND, 10)
         self.SetSizer(sizer_h)
         sizer_h.Fit(self)
 
@@ -376,8 +386,8 @@ class TermPanel(wx.Panel):
             for i in data_to_send:
                 self.txtTerm.AppendText("{}".format(chr(i)))
         for i in data_to_send:
-            self.debugTerm.AppendText("0x{:02X} ".format(i))
-        self.debugTerm.AppendText("\n")
+            self.debugTxTerm.AppendText("0x{:02X} ".format(i))
+        self.debugTxTerm.AppendText("\n")
         self.SendData(data_to_send)
 
     ## Save file button handler
