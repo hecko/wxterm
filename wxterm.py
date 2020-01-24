@@ -116,7 +116,7 @@ class TermPanel(wx.Panel):
             self,
             wx.ID_ANY,
             "",
-            size=(-1, 400),
+            size=(-1, 300),
             style=wx.TE_RICH | wx.TE_MULTILINE | wx.TE_READONLY,
         )
 
@@ -125,7 +125,7 @@ class TermPanel(wx.Panel):
             self,
             wx.ID_ANY,
             "",
-            size=(-1, 50),
+            size=(-1, 100),
             style=wx.TE_RICH | wx.TE_MULTILINE | wx.TE_READONLY,
         )
 
@@ -134,7 +134,7 @@ class TermPanel(wx.Panel):
             self,
             wx.ID_ANY,
             "",
-            size=(-1, 50),
+            size=(-1, 100),
             style=wx.TE_RICH | wx.TE_MULTILINE | wx.TE_READONLY,
         )
 
@@ -146,7 +146,7 @@ class TermPanel(wx.Panel):
         # panel for controls
         self.pnlControl = wx.Panel(self, wx.ID_ANY)
         self.pnlInput = wx.Panel(self, wx.ID_ANY)
-        self.iiiInput = wx.TextCtrl(self.pnlInput, -1, "INPUTTEXT", size=(500, -1))
+        self.iiiInput = wx.TextCtrl(self.pnlInput, -1, "AT", size=(500, -1))
         self.iiiSendInput = wx.Button(self.pnlInput, -1, "Send")
 
         # list of available COM ports
@@ -179,7 +179,8 @@ class TermPanel(wx.Panel):
         self.cboNLine = wx.Choice(
             self.pnlControl, -1, choices=["LF(0x0A) \\n", "CR(0x0D) \\r", "None"]
         )
-        self.cboNLine.SetStringSelection("None")
+        self.cboNLine.SetStringSelection("CR(0x0D) \\r")
+        self.newLine = 0x0D
 
         # local echo
         self.localEcho = True
@@ -279,15 +280,14 @@ class TermPanel(wx.Panel):
         # rx only setting
         self.rxOnly = False
 
-        # newline character
-        self.newLine = 0x00
-
         # counter for alignment of hex display
         self.binCounter = 0
 
     ## Clear terminal. Note that the raw data is not affected.
     def ClearTerminal(self):
         self.txtTerm.Clear()
+        self.debugRxTerm.Clear()
+        self.debugTxTerm.Clear()
 
     ## Put your checksum algorithm here
     def ComputeChecksum(self, data):
@@ -385,9 +385,12 @@ class TermPanel(wx.Panel):
         if self.localEcho:
             for i in data_to_send:
                 self.txtTerm.AppendText("{}".format(chr(i)))
-        for i in data_to_send:
-            self.debugTxTerm.AppendText("0x{:02X} ".format(i))
-        self.debugTxTerm.AppendText("\n")
+                self.debugTxTerm.AppendText("{}".format(chr(i)))
+            self.debugTxTerm.AppendText(" == ")
+            self.debugTxTerm.AppendText("0x ")
+            for i in data_to_send:
+                self.debugTxTerm.AppendText("{:02X}".format(i))
+            self.debugTxTerm.AppendText("\n")
         self.SendData(data_to_send)
 
     ## Save file button handler
@@ -497,19 +500,17 @@ class TermPanel(wx.Panel):
 
             else:
                 if self.newLine == 0x0A:
-                    if byte == 0x0D:
-                        pass
-                    elif byte == 0x0A:
-                        self.txtTerm.AppendText("\n")
-                    else:
-                        self.txtTerm.AppendText(chr(byte))
-                elif self.newLine == 0x0D:
                     if byte == 0x0A:
-                        pass
-                    elif byte == 0x0D:
                         self.txtTerm.AppendText("\n")
                     else:
                         self.txtTerm.AppendText(chr(byte))
+                    self.debugRxTerm.AppendText("{:02X} ".format(byte))
+                elif self.newLine == 0x0D:
+                    if byte == 0x0D:
+                        self.txtTerm.AppendText("\n")
+                    else:
+                        self.txtTerm.AppendText(chr(byte))
+                    self.debugRxTerm.AppendText("{:02X} ".format(byte))
 
     ## wx.EVT_CLOSE handler
     def OnClose(self, evt):
