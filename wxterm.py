@@ -116,7 +116,16 @@ class TermPanel(wx.Panel):
             self,
             wx.ID_ANY,
             "",
-            size=(600, 250),
+            size=(-1, 400),
+            style=wx.TE_RICH | wx.TE_MULTILINE | wx.TE_READONLY,
+        )
+
+        # debug term
+        self.debugTerm = wx.TextCtrl(
+            self,
+            wx.ID_ANY,
+            "",
+            size=(-1, 100),
             style=wx.TE_RICH | wx.TE_MULTILINE | wx.TE_READONLY,
         )
 
@@ -128,7 +137,7 @@ class TermPanel(wx.Panel):
         # panel for controls
         self.pnlControl = wx.Panel(self, wx.ID_ANY)
         self.pnlInput = wx.Panel(self, wx.ID_ANY)
-        self.iiiInput = wx.TextCtrl(self.pnlInput, -1, "INPUTTEXT", size=(175, -1))
+        self.iiiInput = wx.TextCtrl(self.pnlInput, -1, "INPUTTEXT", size=(500, -1))
         self.iiiSendInput = wx.Button(self.pnlInput, -1, "Send")
 
         # list of available COM ports
@@ -143,7 +152,7 @@ class TermPanel(wx.Panel):
             -1,
             choices=["9600", "19200", "38400", "57800", "115200", "230400"],
         )
-        self.cboSpeed.SetStringSelection("115200")
+        self.cboSpeed.SetStringSelection("9600")
 
         # port selection
         self.sttCPort = wx.StaticText(self.pnlControl, -1, "COM Port")
@@ -158,8 +167,10 @@ class TermPanel(wx.Panel):
 
         # newline character
         self.sttNLine = wx.StaticText(self.pnlControl, -1, "Newline Char")
-        self.cboNLine = wx.Choice(self.pnlControl, -1, choices=["LF(0x0A)", "CR(0x0D)"])
-        self.cboNLine.SetStringSelection("LF(0x0A)")
+        self.cboNLine = wx.Choice(
+            self.pnlControl, -1, choices=["LF(0x0A)", "CR(0x0D)", "None"]
+        )
+        self.cboNLine.SetStringSelection("None")
 
         # local echo
         self.localEcho = True
@@ -194,7 +205,7 @@ class TermPanel(wx.Panel):
         self.thread = ComThread(self, self.ser)
 
         # sizer
-        sizer_g = wx.FlexGridSizer(15, 2, 4, 4)
+        sizer_g = wx.FlexGridSizer(3, 6, 4, 4)
         sizer_g.Add(self.sttSpeed, 1, wx.ALIGN_RIGHT | wx.ALIGN_CENTRE_VERTICAL)
         sizer_g.Add(self.cboSpeed, 1, wx.EXPAND)
         sizer_g.Add(self.sttCPort, 1, wx.ALIGN_RIGHT | wx.ALIGN_CENTRE_VERTICAL)
@@ -216,17 +227,18 @@ class TermPanel(wx.Panel):
         self.pnlControl.SetSizer(sizer_g)
 
         # input box sizer
-        sizer_i = wx.FlexGridSizer(15, 2, 4, 4)
-        sizer_i.Add(self.iiiInput, 1, wx.ALIGN_RIGHT | wx.ALIGN_CENTRE_VERTICAL)
+        sizer_i = wx.FlexGridSizer(1, 2, 4, 4)
+        sizer_i.Add(self.iiiInput, 1, wx.EXPAND)
         sizer_i.Add(self.iiiSendInput, 1, wx.ALIGN_RIGHT | wx.ALIGN_CENTRE_VERTICAL)
         self.Bind(wx.EVT_BUTTON, self.OnSendInput, self.iiiSendInput)
         self.pnlInput.SetSizer(sizer_i)
 
         # alignment
         sizer_h = wx.BoxSizer(wx.VERTICAL)
-        sizer_h.Add(self.txtTerm, 1, wx.ALL | wx.EXPAND, 4)
-        sizer_h.Add(self.pnlInput, 0, wx.ALL | wx.EXPAND, 4)
-        sizer_h.Add(self.pnlControl, 0, wx.ALL | wx.EXPAND, 4)
+        sizer_h.Add(self.txtTerm, 0, wx.ALL | wx.EXPAND, 10)
+        sizer_h.Add(self.pnlInput, 0, wx.ALL | wx.EXPAND, 10)
+        sizer_h.Add(self.pnlControl, 0, wx.ALL | wx.EXPAND, 10)
+        sizer_h.Add(self.debugTerm, 0, wx.ALL | wx.EXPAND, 10)
         self.SetSizer(sizer_h)
         sizer_h.Fit(self)
 
@@ -240,6 +252,7 @@ class TermPanel(wx.Panel):
         self.Bind(wx.EVT_BUTTON, self.OnDataReset, self.btnReset)
         self.Bind(wx.EVT_BUTTON, self.OnFileSave, self.btnSave)
         self.Bind(wx.EVT_CHOICE, self.OnSendPacket, self.choSndPkt)
+
         self.txtTerm.Bind(wx.EVT_CHAR, self.OnTermChar)
         self.Bind(wx.EVT_CLOSE, self.OnClose)
         self.Bind(EVT_UPDATE_COMDATA, self.OnUpdateComData)
@@ -257,10 +270,7 @@ class TermPanel(wx.Panel):
         self.rxOnly = False
 
         # newline character
-        if "CR" in self.cboNLine.GetStringSelection():
-            self.newLine = 0x0D
-        else:
-            self.newLine = 0x0A
+        self.newLine = 0x00
 
         # counter for alignment of hex display
         self.binCounter = 0
@@ -332,8 +342,7 @@ class TermPanel(wx.Panel):
 
     ## Set new line character
     def SetNewLine(self, nl):
-        if nl == 0x0D or nl == 0x0A:
-            self.newLine = nl
+        self.newLine = nl
 
     ## Enable/disable local echo
     def SetLocalEcho(self, flag):
@@ -359,12 +368,16 @@ class TermPanel(wx.Panel):
     ## Send data to term
     def OnSendInput(self, evt):
         data_to_send = bytearray(self.iiiInput.GetValue(), "utf-8")
-        data_to_send.extend(bytearray([self.newLine]))
+        if self.newLine != 0x0:
+            data_to_send.extend(bytearray([self.newLine]))
         pprint(data_to_send)
         print("Sending following to COM: {}".format(data_to_send))
         if self.localEcho:
             for i in data_to_send:
                 self.txtTerm.AppendText("{}".format(chr(i)))
+        for i in data_to_send:
+            self.debugTerm.AppendText("0x{:02X} ".format(i))
+        self.debugTerm.AppendText("\n")
         self.SendData(data_to_send)
 
     ## Save file button handler
@@ -388,8 +401,10 @@ class TermPanel(wx.Panel):
     def OnNewLine(self, evt):
         if "CR" in self.cboNLine.GetStringSelection():
             self.SetNewLine(0x0D)
-        else:
+        if "LF" in self.cboNLine.GetStringSelection():
             self.SetNewLine(0x0A)
+        if "None" in self.cboNLine.GetStringSelection():
+            self.SetNewLine(0x00)
 
     ## Local echo mode selection handler
     def OnLocalEcho(self, evt):
@@ -504,7 +519,6 @@ class TermPanel(wx.Panel):
         self.Destroy()
 
 
-# --------1---------2---------3---------4---------5---------6---------7---------8
 if __name__ == "__main__":
 
     class MyFrame(wx.Frame):
@@ -512,7 +526,7 @@ if __name__ == "__main__":
             wx.Frame.__init__(self, parent, title=title)
 
             # serial terminal panel
-            self.pnlTerm = TermPanel(self, serial.Serial(), size=(900, 400))
+            self.pnlTerm = TermPanel(self, serial.Serial(), size=(900, 700))
 
             # sizer
             self.sizer = wx.BoxSizer(wx.VERTICAL)
@@ -525,5 +539,5 @@ if __name__ == "__main__":
 
     # app loop
     app = wx.App()
-    frame = MyFrame(None, "Serial Terminal Demo")
+    frame = MyFrame(None, "Serial Terminal")
     app.MainLoop()
